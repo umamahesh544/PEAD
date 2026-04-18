@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PEAD Screener — Post-Earnings Announcement Drift Filter</title>
+  <meta name="description" content="Screen stocks for Post-Earnings Announcement Drift (PEAD) effect using YOY Sales and EPS growth filters." />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- ── Header ── -->
+  <header class="site-header">
+    <div class="logo">
+      <div class="logo-icon">📈</div>
+      <div class="logo-text">
+        <div class="logo-title">PEAD Screener</div>
+        <div class="logo-subtitle">Post-Earnings Announcement Drift Filter</div>
+      </div>
+    </div>
+    <span class="header-badge">● Live Filter</span>
+  </header>
+
+  <!-- ── KPI Row ── -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Stocks</div>
+      <div class="kpi-value blue" id="kpiTotal">0</div>
+      <div class="kpi-sub">in screener</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">PEAD Candidates</div>
+      <div class="kpi-value green pulse" id="kpiPassing">0</div>
+      <div class="kpi-sub">pass all filters</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">Partial Match</div>
+      <div class="kpi-value amber" id="kpiPartial">0</div>
+      <div class="kpi-sub">pass ≥ 1 filter</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Avg EPS Growth</div>
+      <div class="kpi-value purple" id="kpiAvgEps">–</div>
+      <div class="kpi-sub">across all stocks · <span id="kpiAvgSales">–</span> sales</div>
+    </div>
+  </div>
+
+  <!-- ── Charts ── -->
+  <div class="charts-row" style="margin-bottom:24px">
+    <div class="chart-card">
+      <div class="chart-title">📊 Sales YOY % — by Ticker</div>
+      <div style="height:160px"><canvas id="chartSales"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">💹 EPS YOY % — by Ticker</div>
+      <div style="height:160px"><canvas id="chartEps"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── Main Grid ── -->
+  <div class="main-grid">
+
+    <!-- ── LEFT: Filters ── -->
+    <aside>
+      <div class="panel">
+        <div class="panel-title"><span>⚙</span> PEAD Filters</div>
+
+        <!-- Sales Growth -->
+        <div class="toggle-row">
+          <span class="toggle-label">Sales YOY Filter</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggleSales" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">
+            Min Sales Growth (YOY)
+            <span class="filter-val" id="salesVal">10%</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="salesSlider" min="-50" max="200" value="10" step="1" />
+            <div class="range-progress" style="width:25%"></div>
+          </div>
+          <div style="margin-top:8px">
+            <input type="number" id="salesInput" value="10" min="-50" max="200"
+              style="width:100%;font-family:JetBrains Mono,monospace" placeholder="e.g. 10" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- EPS Growth -->
+        <div class="toggle-row">
+          <span class="toggle-label">EPS YOY Filter</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggleEps" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">
+            Min EPS Growth (YOY)
+            <span class="filter-val" id="epsVal">50%</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="epsSlider" min="-200" max="500" value="50" step="5" />
+            <div class="range-progress" style="width:50%"></div>
+          </div>
+          <div style="margin-top:8px">
+            <input type="number" id="epsInput" value="50" min="-200" max="500"
+              style="width:100%;font-family:JetBrains Mono,monospace" placeholder="e.g. 50" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Legend -->
+        <div class="panel-title"><span>🎯</span> Legend</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:0.78rem">
+          <div><span class="status-dot pass"></span> <span class="badge pass" style="font-size:0.72rem">✓ PEAD</span> — Passes all active filters</div>
+          <div><span class="status-dot partial"></span> <span class="badge partial" style="font-size:0.72rem">~ Partial</span> — Passes at least one</div>
+          <div><span class="status-dot fail"></span> <span class="badge fail" style="font-size:0.72rem">✗ Fail</span> — Fails all filters</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Data Actions -->
+        <div class="panel-title"><span>📂</span> Data</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-primary" onclick="loadSample()" id="btnSample">↻ Load Sample Data</button>
+          <button class="btn btn-secondary" onclick="clearAll()" id="btnClear">🗑 Clear All</button>
+          <button class="btn btn-secondary" onclick="exportCSV()" id="btnExport">⬇ Export Passing CSV</button>
+          <button class="btn btn-secondary" onclick="exportTemplate()" id="btnTemplate">📄 Download Template</button>
+          <label class="btn btn-secondary" for="csvFile" style="cursor:pointer">⬆ Import CSV</label>
+          <input type="file" id="csvFile" accept=".csv" onchange="importCSV(event)" />
+        </div>
+
+        <div style="margin-top:12px;font-size:0.7rem;color:var(--text-muted);line-height:1.5">
+          CSV format: <code style="color:var(--green);font-size:0.65rem">ticker, company, quarter,<br>curSales, prevSales, curEPS, prevEPS</code>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── RIGHT: Table + Add Form ── -->
+    <div class="right-panel">
+
+      <!-- Add Stock Form -->
+      <div class="panel">
+        <div class="panel-title"><span>➕</span> Add Stock</div>
+        <div id="addForm">
+          <div class="add-grid">
+            <!-- Ticker -->
+            <div class="field-group">
+              <label class="field-label" for="inTicker">Ticker</label>
+              <input type="text" id="inTicker" placeholder="INFY" style="text-transform:uppercase" />
+            </div>
+            <!-- Company -->
+            <div class="field-group">
+              <label class="field-label" for="inCompany">Company Name</label>
+              <input type="text" id="inCompany" placeholder="Infosys Ltd" />
+            </div>
+            <!-- Quarter -->
+            <div class="field-group">
+              <label class="field-label" for="inQuarter">Quarter</label>
+              <input type="text" id="inQuarter" placeholder="Q3FY25" />
+            </div>
+            <!-- Numeric pairs -->
+            <div class="field-group">
+              <label class="field-label">Sales (₹ Cr)</label>
+              <div class="add-subgrid">
+                <div>
+                  <label class="field-label" style="font-size:0.62rem">Current</label>
+                  <input type="number" id="inCurSales" placeholder="40924" step="any" />
+                </div>
+                <div>
+                  <label class="field-label" style="font-size:0.62rem">Prev Year</label>
+                  <input type="number" id="inPrevSales" placeholder="36538" step="any" />
+                </div>
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">EPS (₹)</label>
+              <div class="add-subgrid">
+                <div>
+                  <label class="field-label" style="font-size:0.62rem">Current</label>
+                  <input type="number" id="inCurEps" placeholder="21.3" step="any" />
+                </div>
+                <div>
+                  <label class="field-label" style="font-size:0.62rem">Prev Year</label>
+                  <input type="number" id="inPrevEps" placeholder="13.8" step="any" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <button class="btn btn-primary" onclick="addStock()" id="btnAdd"
+                style="width:100%;justify-content:center;padding:10px 0;margin-top:auto">
+                ➕ Add
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Table -->
+      <div class="panel" style="padding:0;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border)">
+          <div class="panel-title" style="margin-bottom:0"><span>📋</span> Screener Results</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:0.72rem;color:var(--text-muted)">Click column headers to sort</span>
+          </div>
+        </div>
+        <div class="table-wrap" style="border:none;border-radius:0">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th width="32"></th>
+                <th data-col="ticker" onclick="sortBy('ticker')">Ticker <span class="sort-icon">↕</span></th>
+                <th data-col="company" onclick="sortBy('company')">Company <span class="sort-icon">↕</span></th>
+                <th data-col="quarter" onclick="sortBy('quarter')">Quarter <span class="sort-icon">↕</span></th>
+                <th data-col="curSales" onclick="sortBy('curSales')">Sales (Cur) <span class="sort-icon">↕</span></th>
+                <th data-col="curEPS" onclick="sortBy('curEPS')">EPS (Cur) <span class="sort-icon">↕</span></th>
+                <th data-col="salesYOY" onclick="sortBy('salesYOY')">Sales YOY% <span class="sort-icon">↕</span></th>
+                <th data-col="epsYOY" onclick="sortBy('epsYOY')">EPS YOY% <span class="sort-icon">↕</span></th>
+                <th>Status</th>
+                <th width="50"></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="10">
+                  <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <div class="empty-msg">Loading sample data…</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- end right-panel -->
+  </div><!-- end main-grid -->
+
+</div><!-- end app-wrapper -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
