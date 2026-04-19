@@ -7,6 +7,14 @@
   <meta name="description" content="Screen stocks for Post-Earnings Announcement Drift (PEAD) effect using YOY Sales and EPS growth filters." />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    .fetch-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 16px; background:var(--bg-card2); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:24px; }
+    .fetch-status { font-size:0.75rem; color:var(--text-secondary); flex:1; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .spinner { display:none; width:14px; height:14px; border:2px solid var(--green-mid); border-top-color:var(--green); border-radius:50%; animation:spin .7s linear infinite; margin-right:4px; }
+    .skeleton { background: linear-gradient(90deg,var(--bg-card2) 25%,var(--border) 50%,var(--bg-card2) 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:4px; }
+    @keyframes shimmer { from{background-position:200% 0} to{background-position:-200% 0} }
+  </style>
 </head>
 <body>
 
@@ -21,15 +29,27 @@
         <div class="logo-subtitle">Post-Earnings Announcement Drift Filter</div>
       </div>
     </div>
-    <span class="header-badge">● Live Filter</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="header-badge">● Live NSE Data</span>
+    </div>
   </header>
+
+  <!-- ── Fetch Bar ── -->
+  <div class="fetch-bar">
+    <button class="btn btn-primary" id="btnFetch" onclick="fetchTodayResults(false)" style="min-width:200px">
+      <span class="spinner" id="fetchSpinner"></span>
+      ⟳ Fetch Today's Results
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="fetchTodayResults(true)" title="Force refresh — bypass cache">↺ Force Refresh</button>
+    <span class="fetch-status" id="fetchStatus">Click to fetch today's NSE quarterly result announcements automatically.</span>
+  </div>
 
   <!-- ── KPI Row ── -->
   <div class="kpi-row">
     <div class="kpi-card">
       <div class="kpi-label">Total Stocks</div>
       <div class="kpi-value blue" id="kpiTotal">0</div>
-      <div class="kpi-sub">in screener</div>
+      <div class="kpi-sub">fetched today</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">PEAD Candidates</div>
@@ -44,7 +64,7 @@
     <div class="kpi-card purple">
       <div class="kpi-label">Avg EPS Growth</div>
       <div class="kpi-value purple" id="kpiAvgEps">–</div>
-      <div class="kpi-sub">across all stocks · <span id="kpiAvgSales">–</span> sales</div>
+      <div class="kpi-sub">all stocks · <span id="kpiAvgSales">–</span> sales avg</div>
     </div>
   </div>
 
@@ -131,16 +151,19 @@
         <!-- Data Actions -->
         <div class="panel-title"><span>📂</span> Data</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn btn-primary" onclick="loadSample()" id="btnSample">↻ Load Sample Data</button>
           <button class="btn btn-secondary" onclick="clearAll()" id="btnClear">🗑 Clear All</button>
-          <button class="btn btn-secondary" onclick="exportCSV()" id="btnExport">⬇ Export Passing CSV</button>
-          <button class="btn btn-secondary" onclick="exportTemplate()" id="btnTemplate">📄 Download Template</button>
+          <button class="btn btn-secondary" onclick="exportCSV()" id="btnExport">⬇ Export PEAD CSV</button>
           <label class="btn btn-secondary" for="csvFile" style="cursor:pointer">⬆ Import CSV</label>
           <input type="file" id="csvFile" accept=".csv" onchange="importCSV(event)" />
         </div>
 
-        <div style="margin-top:12px;font-size:0.7rem;color:var(--text-muted);line-height:1.5">
-          CSV format: <code style="color:var(--green);font-size:0.65rem">ticker, company, quarter,<br>curSales, prevSales, curEPS, prevEPS</code>
+        <div style="margin-top:12px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="font-size:0.7rem;color:var(--text-secondary);font-weight:600;margin-bottom:4px">🖥 Backend Required</div>
+          <div style="font-size:0.68rem;color:var(--text-muted);line-height:1.6">
+            Run in terminal:<br>
+            <code style="color:var(--green)">pip install -r requirements.txt</code><br>
+            <code style="color:var(--green)">python server.py</code>
+          </div>
         </div>
       </div>
     </aside>
@@ -208,9 +231,12 @@
       <!-- Results Table -->
       <div class="panel" style="padding:0;overflow:hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border)">
-          <div class="panel-title" style="margin-bottom:0"><span>📋</span> Screener Results</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="panel-title" style="margin-bottom:0"><span>📋</span> Screener Results</div>
+            <span style="font-size:0.72rem;color:var(--text-muted)" id="resultsDate"></span>
+          </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <span style="font-size:0.72rem;color:var(--text-muted)">Click column headers to sort</span>
+            <span style="font-size:0.72rem;color:var(--text-muted)">Click headers to sort</span>
           </div>
         </div>
         <div class="table-wrap" style="border:none;border-radius:0">

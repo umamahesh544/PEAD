@@ -1,0 +1,6 @@
+flask
+flask-cors
+yfinance>=0.2.40
+requests
+beautifulsoup4
+pandas
