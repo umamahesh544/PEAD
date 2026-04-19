@@ -1,5 +1,5 @@
 """
-PEAD Screener — Python Backend
+PEAD Screener ΓÇö Python Backend
 ===============================
 Fetches today's NSE quarterly results and computes YOY Sales/EPS growth.
 
@@ -19,15 +19,19 @@ import pandas as pd
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-# ── Logging ─────────────────────────────────────────────────────────────────
+# ΓöÇΓöÇ Logging ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
 
-# ── Flask app ────────────────────────────────────────────────────────────────
-app = Flask(__name__)
+# ΓöÇΓöÇ Flask app ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)  # Allow browser to call this from file:// or any origin
 
-# ── NSE-like headers (simulate browser) ──────────────────────────────────────
+@app.route("/")
+def index():
+    return app.send_static_file("index.html")
+
+# ΓöÇΓöÇ NSE-like headers (simulate browser) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 NSE_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -77,7 +81,7 @@ def fetch_nse_results_today():
             purpose = item.get("purpose", "").lower()
             item_date = item.get("date", "")
             if "financial result" in purpose or "quarterly result" in purpose or "annual result" in purpose:
-                # Parse date — NSE returns DD-Mon-YYYY e.g. "18-Apr-2026"
+                # Parse date ΓÇö NSE returns DD-Mon-YYYY e.g. "18-Apr-2026"
                 try:
                     parsed = datetime.strptime(item_date, "%d-%b-%Y").date()
                 except Exception:
@@ -138,7 +142,7 @@ def fetch_financials_yfinance(symbol_ns: str):
         cur_sales  = revenue_row[q_cur]
         prev_sales = revenue_row[q_prev]
 
-        # EPS — prefer direct EPS row, else compute from net income + shares
+        # EPS ΓÇö prefer direct EPS row, else compute from net income + shares
         if eps_row is not None:
             cur_eps  = eps_row[q_cur]
             prev_eps = eps_row[q_prev]
@@ -202,7 +206,7 @@ def compute_status(sales_yoy, eps_yoy, sales_thresh=10, eps_thresh=50):
     return "fail"
 
 
-# ── Cache last result (avoid hammering APIs on every browser refresh) ────────
+# ΓöÇΓöÇ Cache last result (avoid hammering APIs on every browser refresh) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 _cache = {"data": None, "fetched_at": None}
 CACHE_TTL_SECONDS = 600  # 10 minutes
 
@@ -213,7 +217,7 @@ def is_cache_valid():
     return (time.time() - _cache["fetched_at"]) < CACHE_TTL_SECONDS
 
 
-# ── API Routes ────────────────────────────────────────────────────────────────
+# ΓöÇΓöÇ API Routes ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 @app.route("/api/today-results", methods=["GET"])
 def today_results():
@@ -293,7 +297,7 @@ def clear_cache():
     return jsonify({"cleared": True})
 
 
-# ── Fallback Nifty 50 symbols (used when NSE calendar is unavailable) ────────
+# ΓöÇΓöÇ Fallback Nifty 50 symbols (used when NSE calendar is unavailable) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 NIFTY50_FALLBACK = [
     {"symbol": "INFY",        "company": "Infosys Ltd",              "date": date.today().strftime("%d-%b-%Y")},
     {"symbol": "TCS",         "company": "Tata Consultancy Services","date": date.today().strftime("%d-%b-%Y")},
