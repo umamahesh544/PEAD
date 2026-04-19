@@ -1,7 +1,5 @@
 /* ── PEAD Screener — app.js (v2 — auto-fetch backend) ── */
-
-const API_BASE = "http://localhost:5000";
-
+const API_BASE = "";
 // ── State ────────────────────────────────────────────────────────
 let stocks       = [];
 let salesThresh  = 10;
